@@ -1,10 +1,10 @@
-import { useState } from "react";
 import CardInformation from "./CardInformation";
 import { MOCK_DATA } from "../mocks/mock";
 
-export default function InformationSection() {
-  const [selectedStation, setSelectedStation] = useState("trinidad");
-
+export default function InformationSection({
+  selectedStation = "trinidad",
+  onSelectStation = () => {},
+}) {
   return (
     <section 
       aria-labelledby="stations-heading"
@@ -36,7 +36,7 @@ export default function InformationSection() {
               color={station.color}
               icon={station.icon}
               isSelected={selectedStation === station.id}
-              onClick={() => setSelectedStation(station.id)}
+              onClick={() => onSelectStation(station.id)}
             />
           </li>
         ))}
