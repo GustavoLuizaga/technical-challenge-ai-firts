@@ -1,4 +1,4 @@
-import { API_OPEN_METEO } from "../config/env.confing";
+import ENV from "../config/env.confing";
 
 async function getWeatherForecastByLatAndLon({
     lat,
@@ -9,7 +9,7 @@ async function getWeatherForecastByLatAndLon({
     daily = "temperature_2m_max,temperature_2m_min,weather_code",
 }) {
     try {
-        const url = new URL(API_OPEN_METEO);
+        const url = new URL(ENV.API_OPEN_METEO);
 
         url.searchParams.set("latitude", lat);
         url.searchParams.set("longitude", lon);

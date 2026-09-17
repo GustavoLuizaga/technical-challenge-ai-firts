@@ -6,16 +6,21 @@
   --color-bg-secondary: #0c0e1a;
   --color-bg-tertiary: #121628;
   --color-bg-panel: #080a14e0;
+
+  --font-mono: "Share Tech Mono", monospace;
+  --font-sans: "Share Tech Mono", monospace;
 }
 
 :root {
   color-scheme: dark;
+  font-family: "Share Tech Mono", monospace;
 }
 
 html,
 body,
 #root {
   min-height: 100%;
+  font-family: "Share Tech Mono", monospace;
 }
 
 body {

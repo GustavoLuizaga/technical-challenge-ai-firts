@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { geoMercator, geoPath } from "d3-geo";
+import { LuMapPin } from "react-icons/lu";
 import boGeoJson from "../assets/bo.json";
 
 const DEPARTMENT_CONFIG = {
@@ -7,75 +8,75 @@ const DEPARTMENT_CONFIG = {
     stationId: "cobija",
     name: "PANDO",
     color: "#f97316",
-    coordinates: [-68.7588, -11.0267],
-    labelOffset: [15, 0],
+    centerOffset: [0, 0],
+    labelOffset: [0, 18],
   },
   BOB: {
     stationId: "trinidad",
     name: "BENI",
     color: "#06b6d4",
-    coordinates: [-64.9000, -14.8333],
-    labelOffset: [0, -35],
+    centerOffset: [0, 0],
+    labelOffset: [0, 18],
   },
   BOL: {
-    stationId: "la-paz",
+    stationId: "laPaz",
     name: "LA PAZ",
     color: "#a855f7",
-    coordinates: [-68.1193, -16.5000],
-    labelOffset: [0, -35],
+    centerOffset: [-6, 12],
+    labelOffset: [0, 18],
   },
   BOC: {
     stationId: "cochabamba",
     name: "COCHABAMBA",
     color: "#10b981",
-    coordinates: [-66.1568, -17.3895],
-    labelOffset: [25, -6],
+    centerOffset: [0, 0],
+    labelOffset: [0, 18],
   },
   BOO: {
     stationId: "oruro",
     name: "ORURO",
     color: "#eab308",
-    coordinates: [-67.1100, -17.9667],
-    labelOffset: [-10, 0],
+    centerOffset: [0, 0],
+    labelOffset: [0, 18],
   },
   BOP: {
     stationId: "potosi",
     name: "POTOSÍ",
     color: "#ef4444",
-    coordinates: [-65.7550, -19.5836],
-    labelOffset: [18, 8],
+    centerOffset: [0, 0],
+    labelOffset: [0, 18],
   },
   BOH: {
     stationId: "sucre",
     name: "CHUQUISACA",
     color: "#ec4899",
-    coordinates: [-65.2627, -19.0333],
-    labelOffset: [22, 6],
+    centerOffset: [0, 0],
+    labelOffset: [0, 18],
   },
   BOS: {
-    stationId: "santa-cruz",
+    stationId: "santaCruz",
     name: "SANTA CRUZ",
     color: "#3b82f6",
-    coordinates: [-63.1800, -17.7863],
-    labelOffset: [20, -25],
+    centerOffset: [0, 0],
+    labelOffset: [0, 18],
   },
   BOT: {
     stationId: "tarija",
     name: "TARIJA",
     color: "#14b8a6",
-    coordinates: [-64.7300, -21.5300],
-    labelOffset: [10, 5],
+    centerOffset: [0, 0],
+    labelOffset: [0, 18],
   },
 };
 
 export default function BoliviaMap({
   selectedStation = "trinidad",
-  onSelectStation = () => { },
+  onSelectStation = () => {},
   className = "",
 }) {
   const [hoveredStation, setHoveredStation] = useState(null);
 
-  const { projection, pathGenerator } = useMemo(() => {
+  const { pathGenerator, departmentCenters } = useMemo(() => {
     const proj = geoMercator().fitExtent(
       [
         [30, 30],
@@ -84,145 +85,162 @@ export default function BoliviaMap({
       boGeoJson
     );
     const pathGen = geoPath().projection(proj);
-    return { projection: proj, pathGenerator: pathGen };
+
+    // Calcular el centroide geométrico de cada departamento
+    const centers = {};
+    boGeoJson.features.forEach((feature) => {
+      const code = feature.properties.id;
+      const centroid = pathGen.centroid(feature);
+      if (centroid && !isNaN(centroid[0]) && !isNaN(centroid[1])) {
+        centers[code] = centroid;
+      }
+    });
+
+    return { pathGenerator: pathGen, departmentCenters: centers };
   }, []);
 
   return (
     <div
-      className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#030712]/90 p-4 shadow-2xl backdrop-blur-xl ${className}`}
+      className={`flex flex-col h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-[#030712]/90 p-4 shadow-2xl backdrop-blur-xl ${className}`}
     >
-      <svg
-        viewBox="0 0 700 800"
-        className="h-full w-full max-h-[85vh] select-none"
-      >
-        <defs>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-        </defs>
+      {/* Header / Banner en su propia fila superior (sin sobreponerse al mapa) */}
+      <div className="flex w-full items-center justify-center pb-2">
+        <div className="flex items-center gap-2.5 rounded-xl border border-cyan-500/20 bg-[#060814]/80 px-4 py-2 shadow-md backdrop-blur-md">
+          <LuMapPin size={16} className="text-cyan-400 shrink-0" />
+          <span className="text-sm font-medium tracking-wide text-slate-200">
+            Selecciona un departamento para consultar el pronóstico
+          </span>
+        </div>
+      </div>
 
-        <g className="departments">
-          {boGeoJson.features.map((feature) => {
-            const code = feature.properties.id;
-            const config = DEPARTMENT_CONFIG[code] || {
-              stationId: code,
-              name: feature.properties.name,
-              color: "#38bdf8",
-            };
+      {/* Contenedor del mapa SVG */}
+      <div className="flex-1 min-h-0 flex items-center justify-center w-full">
+        <svg
+          viewBox="0 0 700 800"
+          className="h-full w-full max-h-[78vh] select-none"
+        >
+          <defs>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
 
-            const isSelected = selectedStation === config.stationId;
-            const isHovered = hoveredStation === config.stationId;
+          {/* Polígonos de los departamentos */}
+          <g className="departments">
+            {boGeoJson.features.map((feature) => {
+              const code = feature.properties.id;
+              const config = DEPARTMENT_CONFIG[code] || {
+                stationId: code,
+                name: feature.properties.name,
+                color: "#38bdf8",
+              };
 
-            return (
-              <path
-                key={code}
-                d={pathGenerator(feature)}
-                stroke={config.color}
-                strokeWidth={isSelected || isHovered ? 2 : 1}
-                strokeOpacity={isSelected ? 1 : isHovered ? 0.9 : 0.4}
-                fill={
-                  isSelected
-                    ? `${config.color}28`
-                    : isHovered
-                      ? `${config.color}1c`
-                      : `${config.color}09`
-                }
-                filter={isSelected ? "url(#glow)" : undefined}
-                className="cursor-pointer transition-all duration-300 ease-out"
-                onMouseEnter={() => setHoveredStation(config.stationId)}
-                onMouseLeave={() => setHoveredStation(null)}
-                onClick={() => onSelectStation(config.stationId)}
-              />
-            );
-          })}
-        </g>
+              const isSelected = selectedStation === config.stationId;
+              const isHovered = hoveredStation === config.stationId;
 
-        <g className="labels pointer-events-none">
-          {boGeoJson.features.map((feature) => {
-            const code = feature.properties.id;
-            const config = DEPARTMENT_CONFIG[code];
-            if (!config) return null;
-
-            const centroid = pathGenerator.centroid(feature);
-            if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) return null;
-
-            const [ox, oy] = config.labelOffset || [0, 0];
-            const x = centroid[0] + ox;
-            const y = centroid[1] + oy;
-            const isSelected = selectedStation === config.stationId;
-            const isHovered = hoveredStation === config.stationId;
-
-            return (
-              <text
-                key={`label-${code}`}
-                x={x}
-                y={y}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill={config.color}
-                opacity={isSelected ? 1 : isHovered ? 0.95 : 0.6}
-                className="font-mono text-[11px] font-bold tracking-widest transition-opacity duration-200"
-                style={{
-                  textShadow: isSelected
-                    ? `0 0 8px ${config.color}, 0 0 2px black`
-                    : "0 0 3px black",
-                }}
-              >
-                {config.name}
-              </text>
-            );
-          })}
-        </g>
-
-        <g className="stations">
-          {Object.entries(DEPARTMENT_CONFIG).map(([code, config]) => {
-            const point = projection(config.coordinates);
-            if (!point) return null;
-
-            const [x, y] = point;
-            const isSelected = selectedStation === config.stationId;
-            const isHovered = hoveredStation === config.stationId;
-
-            return (
-              <g
-                key={`station-${code}`}
-                transform={`translate(${x}, ${y})`}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredStation(config.stationId)}
-                onMouseLeave={() => setHoveredStation(null)}
-                onClick={() => onSelectStation(config.stationId)}
-              >
-
-                <circle
-                  r={isSelected ? 18 : 13}
-                  fill={config.color}
-                  opacity={isSelected ? 0.35 : 0.2}
-                  className="animate-ping"
-                />
-
-                <circle
-                  r={isSelected ? 10 : 7}
-                  fill={config.color}
-                  opacity={isSelected ? 0.5 : 0.3}
-                />
-
-                <circle
-                  r={4}
-                  fill={config.color}
+              return (
+                <path
+                  key={code}
+                  d={pathGenerator(feature)}
+                  stroke={config.color}
+                  strokeWidth={isSelected || isHovered ? 2 : 1}
+                  strokeOpacity={isSelected ? 1 : isHovered ? 0.9 : 0.4}
+                  fill={
+                    isSelected
+                      ? `${config.color}28`
+                      : isHovered
+                        ? `${config.color}1c`
+                        : `${config.color}09`
+                  }
                   filter={isSelected ? "url(#glow)" : undefined}
+                  className="cursor-pointer transition-all duration-300 ease-out"
+                  onMouseEnter={() => setHoveredStation(config.stationId)}
+                  onMouseLeave={() => setHoveredStation(null)}
+                  onClick={() => onSelectStation(config.stationId)}
                 />
+              );
+            })}
+          </g>
 
-                <circle
-                  r={2}
-                  fill="#ffffff"
-                  opacity={isSelected || isHovered ? 1 : 0.85}
-                />
-              </g>
-            );
-          })}
-        </g>
-      </svg>
+          {/* Localizadores y nombres centrados en cada departamento */}
+          <g className="stations">
+            {boGeoJson.features.map((feature) => {
+              const code = feature.properties.id;
+              const config = DEPARTMENT_CONFIG[code];
+              const centroid = departmentCenters[code];
+              if (!config || !centroid) return null;
+
+              const [ox, oy] = config.centerOffset || [0, 0];
+              const x = centroid[0] + ox;
+              const y = centroid[1] + oy;
+
+              const [lox, loy] = config.labelOffset || [0, 18];
+              const labelX = x + lox;
+              const labelY = y + loy;
+
+              const isSelected = selectedStation === config.stationId;
+              const isHovered = hoveredStation === config.stationId;
+
+              return (
+                <g
+                  key={`station-${code}`}
+                  className="cursor-pointer transition-all duration-200"
+                  onMouseEnter={() => setHoveredStation(config.stationId)}
+                  onMouseLeave={() => setHoveredStation(null)}
+                  onClick={() => onSelectStation(config.stationId)}
+                >
+                  {/* Pin localizador */}
+                  <g transform={`translate(${x}, ${y})`}>
+                    <circle
+                      r={isSelected ? 18 : 12}
+                      fill={config.color}
+                      opacity={isSelected ? 0.35 : 0.18}
+                      className="animate-ping"
+                    />
+
+                    <circle
+                      r={isSelected ? 9 : 6}
+                      fill={config.color}
+                      opacity={isSelected ? 0.5 : 0.28}
+                    />
+
+                    <circle
+                      r={4}
+                      fill={config.color}
+                      filter={isSelected ? "url(#glow)" : undefined}
+                    />
+
+                    <circle
+                      r={2}
+                      fill="#ffffff"
+                      opacity={isSelected || isHovered ? 1 : 0.85}
+                    />
+                  </g>
+
+                  {/* Etiqueta del departamento */}
+                  <text
+                    x={labelX}
+                    y={labelY}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill={config.color}
+                    opacity={isSelected ? 1 : isHovered ? 0.95 : 0.75}
+                    className="font-mono text-[11px] font-bold tracking-widest pointer-events-none"
+                    style={{
+                      textShadow: isSelected
+                        ? `0 0 8px ${config.color}, 0 0 2px black`
+                        : "0 0 3px black",
+                    }}
+                  >
+                    {config.name}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        </svg>
+      </div>
     </div>
   );
 }
